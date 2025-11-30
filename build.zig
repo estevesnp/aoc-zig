@@ -121,10 +121,10 @@ fn setupRunStep(run_step: *Step) !void {
         return runAllDays(run_step, year, days);
     }
 
-    // const day = opts.day orelse getHighestDay(arena, year) catch null orelse {
-    //     std.log.warn("no available days to run for year. make sure it exsists, or create one with 'zig build add -Dyear=<year>", .{});
-    //     return;
-    // };
+    const day = opts.day orelse getHighestDay(arena, year) catch null orelse return;
+
+    const aoc_step = try AocStep.create(b, year, day, opts.part orelse .all);
+    run_step.dependOn(&aoc_step.step);
 }
 
 fn runAllDays(run_step: *Step, year: u16, days: []u16) !void {
