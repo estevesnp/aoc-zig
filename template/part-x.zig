@@ -1,6 +1,11 @@
 const std = @import("std");
+const mem = std.mem;
+const fmt = std.fmt;
+
 const Allocator = std.mem.Allocator;
 const Io = std.Io;
+
+const assert = std.debug.assert;
 
 const input_content = @embedFile("input.txt");
 // const input_content = @embedFile("small.txt");
