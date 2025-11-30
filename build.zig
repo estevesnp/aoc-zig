@@ -103,7 +103,7 @@ fn setupRunStep(run_step: *Step) !void {
     const arena = b.allocator;
 
     const year = opts.year orelse getHighestYear(arena) catch null orelse {
-        std.log.warn("no available year to run. add a new year with 'zig build add -Dyear=<year>", .{});
+        std.log.warn("no available year to run", .{});
         return;
     };
 
