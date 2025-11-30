@@ -2,14 +2,34 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Step = std.Build.Step;
 
-const Part = enum { @"1", @"2", all };
-
 const Options = struct {
     year: ?u16,
     day: ?u16,
     run_all: bool,
     part: ?Part,
 };
+const Part = enum { @"1", @"2", all };
+
+var opts: Options = undefined;
+
+pub fn build(b: *std.Build) !void {
+    opts = .{
+        .year = b.option(u16, "year", "AOC year"),
+        .day = b.option(u16, "day", "AOC day"),
+        .run_all = b.option(bool, "run-all", "run all AOC days for year") orelse false,
+        .part = b.option(Part, "part", "AOC part to run"),
+    };
+
+    b.top_level_steps.clearRetainingCapacity();
+
+    const run_step = b.step("run", "run AOC challenges");
+    b.default_step = run_step;
+
+    const add_step = b.step("add", "add a day for AOC");
+    add_step.makeFn = addStep;
+
+    try setupRunStep(run_step);
+}
 
 const AocStep = struct {
     step: Step,
@@ -78,29 +98,6 @@ const AocStep = struct {
     }
 };
 
-var opts: Options = undefined;
-
-const part_template = @embedFile("template/part-x.zig");
-
-pub fn build(b: *std.Build) !void {
-    opts = .{
-        .year = b.option(u16, "year", "AOC year"),
-        .day = b.option(u16, "day", "AOC day"),
-        .run_all = b.option(bool, "run-all", "run all AOC days for year") orelse false,
-        .part = b.option(Part, "part", "AOC part to run"),
-    };
-
-    b.top_level_steps.clearRetainingCapacity();
-
-    const run_step = b.step("run", "run AOC challenges");
-    b.default_step = run_step;
-
-    const add_step = b.step("add", "add a day for AOC");
-    add_step.makeFn = addStep;
-
-    try setupRunStep(run_step);
-}
-
 fn setupRunStep(run_step: *Step) !void {
     const b = run_step.owner;
     const arena = b.allocator;
@@ -134,7 +131,7 @@ fn runAllDays(run_step: *Step, year: u16, days: []u16) !void {
     run_step.dependOn(last_step);
 
     for (days) |day| {
-        const aoc_step = try AocStep.create(b, year, day, .all);
+        const aoc_step = try AocStep.create(b, year, day, opts.part orelse .all);
         aoc_step.step.dependOn(last_step);
         last_step = &aoc_step.step;
     }
@@ -216,6 +213,8 @@ fn getHighestDay(arena: Allocator, year: u16) !?u16 {
 
     return days[days.len - 1];
 }
+
+const part_template = @embedFile("template/part-x.zig");
 
 fn addDay(arena: Allocator, year: u16, day: u16) !void {
     var year_str_buf: [16]u8 = undefined;
