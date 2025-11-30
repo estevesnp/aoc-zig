@@ -62,7 +62,7 @@ const AocStep = struct {
         const year_str = try std.fmt.bufPrint(&year_buf, "{d}", .{year});
 
         var day_buf: [16]u8 = undefined;
-        const day_str = try std.fmt.bufPrint(&day_buf, "day-{d}", .{day});
+        const day_str = try std.fmt.bufPrint(&day_buf, "day-{d:02}", .{day});
 
         const part_num: u2, const part_str = switch (part) {
             .part_1 => .{ 1, "part-1.zig" },
@@ -222,7 +222,7 @@ fn addDay(arena: Allocator, year: u16, day: u16) !void {
     const year_str = try std.fmt.bufPrint(&year_str_buf, "{d}", .{year});
 
     var day_str_buf: [16]u8 = undefined;
-    const day_str = try std.fmt.bufPrint(&day_str_buf, "day-{d}", .{day});
+    const day_str = try std.fmt.bufPrint(&day_str_buf, "day-{d:02}", .{day});
 
     const day_path = try std.fs.path.join(arena, &.{ "src", year_str, day_str });
     defer arena.free(day_path);
