@@ -24,7 +24,7 @@ pub fn main() !void {
     try stdout.flush();
 }
 
-fn run(gpa: Allocator, io: Io, input: []const u8) !i64 {
+fn run(gpa: Allocator, io: Io, input: []const u8) !usize {
     _ = gpa;
     _ = io;
     _ = input;
