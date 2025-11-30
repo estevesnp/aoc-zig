@@ -1,26 +1,96 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Step = std.Build.Step;
 
 const Part = enum { @"1", @"2", all };
 
 const Options = struct {
     year: ?u16,
     day: ?u16,
+    run_all: bool,
     part: ?Part,
+};
+
+const AocStep = struct {
+    step: Step,
+    year: u16,
+    day: u16,
+    part: Part,
+
+    fn create(
+        b: *std.Build,
+        year: u16,
+        day: u16,
+        part: Part,
+    ) !*AocStep {
+        const aoc_step = try b.allocator.create(AocStep);
+        aoc_step.* = .{
+            .step = Step.init(.{
+                .id = .custom,
+                .name = "todo",
+                .owner = b,
+                .makeFn = make,
+            }),
+            .year = year,
+            .day = day,
+            .part = part,
+        };
+        return aoc_step;
+    }
+
+    fn make(step: *Step, _: Step.MakeOptions) anyerror!void {
+        const self: *AocStep = @alignCast(@fieldParentPtr("step", step));
+        const b = self.step.owner;
+
+        switch (self.part) {
+            .@"1" => try run(b.allocator, self.year, self.day, .part_1),
+            .@"2" => try run(b.allocator, self.year, self.day, .part_2),
+            .all => {
+                try run(b.allocator, self.year, self.day, .part_1);
+                try run(b.allocator, self.year, self.day, .part_2);
+            },
+        }
+    }
+
+    fn run(
+        arena: Allocator,
+        year: u16,
+        day: u16,
+        part: enum { part_1, part_2 },
+    ) !void {
+        var year_buf: [16]u8 = undefined;
+        const year_str = try std.fmt.bufPrint(&year_buf, "{d}", .{year});
+
+        var day_buf: [16]u8 = undefined;
+        const day_str = try std.fmt.bufPrint(&day_buf, "day-{d}", .{day});
+
+        const part_num: u2, const part_str = switch (part) {
+            .part_1 => .{ 1, "part-1.zig" },
+            .part_2 => .{ 2, "part-2.zig" },
+        };
+
+        const path = try std.fs.path.join(arena, &.{ "src", year_str, day_str, part_str });
+
+        std.log.info("running year {d}, day {d}, part {d}", .{ year, day, part_num });
+
+        var child: std.process.Child = .init(&.{ "zig", "run", path }, arena);
+        _ = try child.spawnAndWait();
+    }
 };
 
 var opts: Options = undefined;
 
 const part_template = @embedFile("template/part-x.zig");
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     opts = .{
         .year = b.option(u16, "year", "AOC year"),
         .day = b.option(u16, "day", "AOC day"),
+        .run_all = b.option(bool, "run-all", "run all AOC days for year") orelse false,
         .part = b.option(Part, "part", "AOC part to run"),
     };
 
-    b.top_level_steps = .empty;
+    b.top_level_steps.clearRetainingCapacity();
 
     const run_step = b.step("run", "run AOC challenges");
     b.default_step = run_step;
@@ -28,10 +98,65 @@ pub fn build(b: *std.Build) void {
     const add_step = b.step("add", "add a day for AOC");
     add_step.makeFn = addStep;
 
-    // TODO - hook run_step to aoc files
+    try setupRunStep(run_step);
 }
 
-fn addStep(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
+fn setupRunStep(run_step: *Step) !void {
+    const b = run_step.owner;
+    const arena = b.allocator;
+
+    const year = opts.year orelse getHighestYear(arena) catch null orelse {
+        std.log.warn("no available year to run. add a new year with 'zig build add -Dyear=<year>", .{});
+        return;
+    };
+
+    if (opts.run_all) {
+        const days = try getDays(arena, year);
+
+        if (days.len == 0) {
+            std.log.warn("no days found for year {d}", .{year});
+            return;
+        }
+
+        return runAllDays(run_step, year, days);
+    }
+
+    // const day = opts.day orelse getHighestDay(arena, year) catch null orelse {
+    //     std.log.warn("no available days to run for year. make sure it exsists, or create one with 'zig build add -Dyear=<year>", .{});
+    //     return;
+    // };
+}
+
+fn runAllDays(run_step: *Step, year: u16, days: []u16) !void {
+    const b = run_step.owner;
+
+    var last_step = try createHookStep(b);
+    run_step.dependOn(last_step);
+
+    for (days) |day| {
+        const aoc_step = try AocStep.create(b, year, day, .all);
+        aoc_step.step.dependOn(last_step);
+        last_step = &aoc_step.step;
+    }
+    run_step.dependOn(last_step);
+}
+
+fn createHookStep(b: *std.Build) !*Step {
+    const step = try b.allocator.create(Step);
+    step.* = Step.init(.{
+        .id = .custom,
+        .name = "hook",
+        .owner = b,
+        .makeFn = struct {
+            fn make(_: *Step, _: Step.MakeOptions) !void {
+                std.log.info("running all days", .{});
+            }
+        }.make,
+    });
+    return step;
+}
+
+fn addStep(step: *Step, _: Step.MakeOptions) anyerror!void {
     const b = step.owner;
     const arena = b.allocator;
 
@@ -39,7 +164,7 @@ fn addStep(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
         std.log.err("no year provided, provide with -Dyear=<year>", .{});
         std.process.exit(2);
     };
-    const day = opts.day orelse (getHighestDay(arena, year) catch 0 orelse 0) + 1;
+    const day = opts.day orelse (getHighestDay(arena, year) catch null orelse 0) + 1;
     try addDay(arena, year, day);
 }
 

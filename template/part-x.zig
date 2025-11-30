@@ -28,4 +28,6 @@ fn run(gpa: Allocator, io: Io, input: []const u8) !i64 {
     _ = gpa;
     _ = io;
     _ = input;
+
+    return error.NotImplemented;
 }
