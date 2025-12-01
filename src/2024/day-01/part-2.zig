@@ -39,7 +39,9 @@ fn run(gpa: Allocator, io: Io, input: []const u8) !usize {
     defer occ_map.deinit(gpa);
 
     var iter = mem.tokenizeScalar(u8, input, '\n');
-    while (iter.next()) |line| {
+    while (iter.next()) |full_line| {
+        const line = mem.trimEnd(u8, full_line, "\r");
+
         var num_iter = mem.tokenizeScalar(u8, line, ' ');
         const left_str = num_iter.next() orelse unreachable;
         const right_str = num_iter.next() orelse unreachable;
