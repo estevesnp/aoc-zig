@@ -1,5 +1,4 @@
 zig-out/
 .zig-cache/
 
-input.txt
-small.txt
+*.txt
