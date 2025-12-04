@@ -21,13 +21,15 @@ pub fn main() !void {
     defer threaded.deinit();
     const io = threaded.io();
 
+    var timer = try std.time.Timer.start();
     const res = try run(gpa, io, input_content);
+    const time_ns = timer.read();
 
     var buf: [128]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&buf);
     const stdout = &stdout_writer.interface;
 
-    try stdout.print("RESULT: {d}\n", .{res});
+    try stdout.print("RESULT: {d} ({d} ns)\n", .{ res, time_ns });
     try stdout.flush();
 }
 

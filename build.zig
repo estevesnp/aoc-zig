@@ -62,10 +62,13 @@ const AocStep = struct {
         run_type: RunType,
     ) !*AocStep {
         const aoc_step = try b.allocator.create(AocStep);
+        var buf: [32]u8 = undefined;
+        const name = try std.fmt.bufPrint(&buf, "year {d} day {d} part {t}", .{ year, day, part });
+
         aoc_step.* = .{
             .step = Step.init(.{
                 .id = .custom,
-                .name = "todo",
+                .name = name,
                 .owner = b,
                 .makeFn = make,
             }),
