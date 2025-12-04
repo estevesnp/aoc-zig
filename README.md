@@ -12,6 +12,7 @@ you can run a specific challenge with `zig build run -Dyear=<year> -Dday=<day> -
 - if year is omitted, run the latest existing year
 - if day is omitted, run the latest day for the given year
 - if part is omitted, run both parts. options are: `1, 2, all`
+- can run tests instead with `-Dtest`
 - can also use `-Drun-all` to run all days for a given year
 
 ## add
