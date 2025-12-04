@@ -103,7 +103,7 @@ const AocStep = struct {
             .run => "running",
             .@"test" => "testing",
         };
-        std.log.info("{s} year {d}, day {d}, part {s}", .{ action_str, self.year, self.day, @tagName(self.part) });
+        std.log.info("{s} year {d}, day {d}, part {s}", .{ action_str, self.year, self.day, @tagName(part) });
 
         var child: std.process.Child = .init(&.{ "zig", @tagName(self.run_type), path }, arena);
         _ = try child.spawnAndWait();
