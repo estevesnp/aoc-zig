@@ -57,10 +57,8 @@ fn run(gpa: Allocator, io: Io, input: []const u8) !usize {
     }
 
     var max_area: usize = 1;
-    for (points.items, 0..) |point, idx| {
-        for (points.items, 0..) |i_point, i_idx| {
-            if (idx == i_idx) continue;
-
+    for (points.items[0 .. points.items.len - 1], 0..) |point, idx| {
+        for (points.items[idx + 1 ..]) |i_point| {
             const area = (absDiff(point.x, i_point.x) + 1) * (absDiff(point.y, i_point.y) + 1);
             if (area > max_area) max_area = area;
         }
